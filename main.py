@@ -1,6 +1,7 @@
 #!/bin/python3
 from pathlib import Path
 from argparse import ArgumentParser as arg
+from subprocess import Popen, PIPE
 
 
 class ArgParser:
@@ -9,8 +10,8 @@ class ArgParser:
         self.__parser = arg(description=desc)
         self.__parser.add_argument("dirs", nargs="*", default=".", 
                                    help="list of whitespace separated directories to be initialized")
-        self.__parser.add_argument("--git-init", type=bool, default=True, 
-                                   help="should git repository be initialized (default is true)")
+        self.__parser.add_argument("--git-init", action="store_true",
+                                   help="should git repository be initialized (default is False)")
         self.__argv = self.__parser.parse_args()
 
     def parse_args(self):
@@ -24,7 +25,7 @@ class ArgParser:
 
 
 class ProjectGenerator:
-    def __init__(self, target: list):
+    def __init__(self, target: list, git_init: bool):
         self.__project_path = self.__populate_path(target)    
         self.__generate_project_folder() 
         self.__generate_modules()   
@@ -32,6 +33,8 @@ class ProjectGenerator:
         self.__generate_file(".gitignore")
         self.__generate_file('README.md')
         self.__generate_file("main.py")
+        self.__git_init(git_init)
+        
     
     def __str__(self):
         return self.__project_path.__str__()
@@ -75,7 +78,13 @@ class ProjectGenerator:
             else:
                 print(path.absolute(), "already exists. Aborting")
                 
+    def __git_init(self, init: bool):
+        if init:
+            find_git = Popen("/bin/which git", stdout=PIPE, stderr=PIPE, shell=True)
+            (out, err) = find_git.communicate()
+            git_command = [out.strip().decode('utf-8'), "init", "."]
+            print(git_command)
 
 if __name__ == "__main__":
     parser = ArgParser()
-    generator = ProjectGenerator(parser.get_dirs())
+    generator = ProjectGenerator(parser.get_dirs(), parser.get_git_init())
